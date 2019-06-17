@@ -1,6 +1,5 @@
 # Terraform - VPC Infrastructure Provisioning
-
-This is just some stuff I whipped together. This deployment creates two VPCs (one in each region), with inside and outside subnets in each VPC. This also deploys EC2 instances inside of the VPCs.
+This deployment creates two VPCs (one in each region), with inside and outside subnets in each VPC. This also deploys EC2 instances inside of the VPCs.
 
 ## Concept
 The goal of this code is to define a multi-regional, redundant, and resilient network architecture in AWS as the standard for new product implementations going forward. Ideally, the an infrastructure team will create and maintain the VPC portion of the overall AWS infrastructure to maintain design and security standards. With that being said, the goal of the infrastructure team should be to allow other members of the engineering teams to operate in these VPCs with ease.
