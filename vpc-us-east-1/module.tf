@@ -1,23 +1,24 @@
 provider "aws" {
-  region = "${var.region}"
+  region                  = var.region
   shared_credentials_file = "/path/to/credentials"
-  profile = "default"
+  profile                 = "default"
 }
 
-data "aws_availability_zones" "available" {}
+data "aws_availability_zones" "available" {
+}
 
 resource "aws_vpc" "main-us-east" {
-    cidr_block              = "10.27.0.0/16"
-    enable_dns_support      = "true"
-    enable_dns_hostnames    = "true"
-    
-    tags {
-        Name = "vpc-${var.region}"
-    }
+  cidr_block           = "10.27.0.0/16"
+  enable_dns_support   = "true"
+  enable_dns_hostnames = "true"
+
+  tags = {
+    Name = "vpc-${var.region}"
+  }
 }
 
 resource "aws_internet_gateway" "default" {
-  vpc_id = "${aws_vpc.main-us-east.id}"
+  vpc_id = aws_vpc.main-us-east.id
 
   tags = {
     Name = "cdn-${var.region}-igw"
@@ -25,66 +26,67 @@ resource "aws_internet_gateway" "default" {
 }
 
 resource "aws_subnet" "public" {
-  count                           = "${length(data.aws_availability_zones.available.names)}"
-  vpc_id                          = "${aws_vpc.main-us-east.id}"
-  cidr_block                      = "${cidrsubnet(aws_vpc.main-us-east.cidr_block, 6, count.index)}"
-  map_public_ip_on_launch         = true
-  availability_zone               = "${element(data.aws_availability_zones.available.names, count.index)}"
+  count                   = length(data.aws_availability_zones.available.names)
+  vpc_id                  = aws_vpc.main-us-east.id
+  cidr_block              = cidrsubnet(aws_vpc.main-us-east.cidr_block, 6, count.index)
+  map_public_ip_on_launch = true
+  availability_zone       = element(data.aws_availability_zones.available.names, count.index)
 
   tags = {
     Name = "cdn-${element(data.aws_availability_zones.available.names, count.index)}-public"
   }
 }
 
-
 resource "aws_route_table" "public" {
-  count  = "${length(data.aws_availability_zones.available.names)}"
-  vpc_id = "${aws_vpc.main-us-east.id}"
+  count  = length(data.aws_availability_zones.available.names)
+  vpc_id = aws_vpc.main-us-east.id
 
   route {
     cidr_block = "0.0.0.0/0"
-    gateway_id = "${aws_internet_gateway.default.id}"
+    gateway_id = aws_internet_gateway.default.id
   }
 }
 
 resource "aws_route_table_association" "public" {
-  count          = "${length(data.aws_availability_zones.available.names)}"
-  subnet_id      = "${element(aws_subnet.public.*.id, count.index)}"
-  route_table_id = "${element(aws_route_table.public.*.id, count.index)}"
+  count          = length(data.aws_availability_zones.available.names)
+  subnet_id      = element(aws_subnet.public.*.id, count.index)
+  route_table_id = element(aws_route_table.public.*.id, count.index)
 }
 
 resource "aws_subnet" "private" {
-  count                           = "${length(data.aws_availability_zones.available.names)}"
-  vpc_id                          = "${aws_vpc.main-us-east.id}"
-  cidr_block                      = "${cidrsubnet(aws_vpc.main-us-east.cidr_block, 6, count.index + aws_subnet.public.count)}"
-  availability_zone               = "${element(data.aws_availability_zones.available.names, count.index)}"
+  count  = length(data.aws_availability_zones.available.names)
+  vpc_id = aws_vpc.main-us-east.id
+  cidr_block = cidrsubnet(
+    aws_vpc.main-us-east.cidr_block,
+    6,
+    count.index + length(aws_subnet.public),
+  )
+  availability_zone = element(data.aws_availability_zones.available.names, count.index)
 
   tags = {
     Name = "cdn-${element(data.aws_availability_zones.available.names, count.index)}-private"
   }
 }
 
-
 resource "aws_route_table" "private" {
-  count  = "${length(data.aws_availability_zones.available.names)}"
-  vpc_id = "${aws_vpc.main-us-east.id}"
-
+  count  = length(data.aws_availability_zones.available.names)
+  vpc_id = aws_vpc.main-us-east.id
 }
 
 resource "aws_route_table_association" "private" {
-  count          = "${length(data.aws_availability_zones.available.names)}"
-  subnet_id      = "${element(aws_subnet.private.*.id, count.index)}"
-  route_table_id = "${element(aws_route_table.private.*.id, count.index)}"
+  count          = length(data.aws_availability_zones.available.names)
+  subnet_id      = element(aws_subnet.private.*.id, count.index)
+  route_table_id = element(aws_route_table.private.*.id, count.index)
 }
 
 resource "aws_security_group" "default" {
-  vpc_id = "${aws_vpc.main-us-east.id}"
+  vpc_id = aws_vpc.main-us-east.id
 
   ingress {
-    from_port        = -1
-    to_port          = -1
-    protocol         = "icmp"
-    cidr_blocks      = ["0.0.0.0/0"]
+    from_port   = -1
+    to_port     = -1
+    protocol    = "icmp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 }
 
@@ -99,7 +101,6 @@ resource "aws_security_group" "default" {
 #    Name = "cdn-server-${element(data.aws_availability_zones.available.names, count.index)}-${count.index}"
 #  }
 #}
-
 #resource "aws_instance" "private-server" {
 #  count                  = "${length(data.aws_availability_zones.available.names) * var.servers_per_az}"
 #  instance_type          = "${var.instance_type}"

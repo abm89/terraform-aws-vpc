@@ -1,2 +1,6 @@
-variable "pcx_id" {}
-variable "accept_region" {}
+variable "pcx_id" {
+}
+
+variable "accept_region" {
+}
+
