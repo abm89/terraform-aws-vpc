@@ -93,6 +93,20 @@ resource "aws_security_group" "default" {
   }
 }
 
+#create S3 VPC endpoint
+resource "aws_vpc_endpoint" "s3" {
+  vpc_id       = aws_vpc.main-us-west.id
+  service_name = "com.amazonaws.us-west-2.s3"
+}
+
+#VPC endpoint route table association
+resource "aws_vpc_endpoint_route_table_association" "s3" {
+  count           = length(data.aws_availability_zones.available.names)
+  route_table_id  = element(aws_route_table.private.*.id, count.index)
+  vpc_endpoint_id = aws_vpc_endpoint.s3.id
+}
+
+
 #resource "aws_instance" "public-server" {
 #  count                  = "${length(data.aws_availability_zones.available.names) * var.servers_per_az}"
 #  instance_type          = "${var.instance_type}"
