@@ -29,8 +29,8 @@ This code is deployable out-of-the-box. Key things to change are the following:
 Found in `/main.tf`, create a module folder and call it with:
 ```
 module "vpc-us-west-2" {
-    source = "vpc-us-west-2"
-    region = "us-west-2"
+  source = "./vpc-us-west-2"
+  region = "us-west-2"
 }
 ```
 
@@ -50,10 +50,14 @@ resource "aws_vpc" "main-eu-west" {
 Modify the subnet size by adjusting the number of network bits in the configuration using `cidrsubnet`:
 ```
 resource "aws_subnet" "public" {
-  count                           = "${length(data.aws_availability_zones.available.names)}"
-  vpc_id                          = "${aws_vpc.main-eu-west.id}"
-  cidr_block                      = "${cidrsubnet(aws_vpc.main-eu-west.cidr_block, 6, count.index)}"
-  ...
+  count                   = length(data.aws_availability_zones.available.names)
+  vpc_id                  = aws_vpc.main-us-west.id
+  cidr_block              = cidrsubnet(aws_vpc.main-us-west.cidr_block, 6, count.index)
+  map_public_ip_on_launch = true
+  availability_zone       = element(data.aws_availability_zones.available.names, count.index)
+
+  tags = {
+    Name = "cdn-${element(data.aws_availability_zones.available.names, count.index)}-public"
   }
 }
 ```
